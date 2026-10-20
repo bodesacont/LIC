@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LawnLine Pro - Prototype Sandbox</title>
+    <style>
+        :root {
+            --bg-main: #121212;
+            --bg-sidebar: #1e1e1e;
+            --bg-card: #2a2a2a;
+            --accent: #4CAF50;
+            --accent-hover: #45a049;
+            --text-main: #e0e0e0;
+            --text-muted: #aaaaaa;
+            --border: #3a3a3a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 360px;
+            background: var(--bg-sidebar);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        h2 {
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .section {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .mower-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mower-btn {
+            background: #3a3a3a;
+            color: #fff;
+            border: 2px solid transparent;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .mower-btn:hover { background: #4a4a4a; }
+        .mower-btn.active {
+            background: #1b3a22;
+            border-color: var(--accent);
+        }
+
+        .mower-btn .spec {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .metric-row:last-child { border-bottom: none; }
+        .metric-val { font-weight: bold; color: var(--accent); }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .action-btn {
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s, background-color 0.2s;
+        }
+
+        #clearBtn { background: #f44336; color: white; width: 35%; }
+        #clearBtn:hover { background: #d32f2f; }
+        
+        #startBtn { background: var(--accent); color: white; width: 65%; }
+        #startBtn:hover { background: var(--accent-hover); }
+        #startBtn:disabled { background: #444; color: #777; cursor: not-allowed; }
+
+        #workspace {
+            flex: 1;
+            position: relative;
+            background: #0d1117;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-image: url('https://images.unsplash.com/photo-1592417817098-8f3d6eb19675?q=80&w=1200&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .banner {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px 18px;
+            border-radius: 6px;
+            border: 1px solid var(--accent);
+            pointer-events: none;
+            font-size: 0.85rem;
+            z-index: 5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div>
+            <h2>LawnLine Pro</h2>
+            <p class="subtitle">Prototype Pipeline: Click workspace to draw yard perimeter, then calculate single-line trajectory.</p>
+        </div>
+
+        <div class="section">
+            <h3>1. Select Mower Type</h3>
+            <div class="mower-options">
+                <button class="mower-btn active" data-deck="12" data-speed="1.5">
+                    <span>🤖 Robot Mower</span>
+                    <span class="spec">12" Deck</span>
+                </button>
+                <button class="mower-btn" data-deck="21" data-speed="3.0">
+                    <span>🏃‍♂️ Push Mower</span>
+                    <span class="spec">21" Deck</span>
+                </button>
+                <button class="mower-btn" data-deck="48" data-speed="6.0">
+                    <span>🚜 Riding Mower</span>
+                    <span class="spec">48" Deck</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. Path Calculations</h3>
+            <div class="metric-row"><span>Yard Area:</span><span class="metric-val" id="valArea">0 sq ft</span></div>
+            <div class="metric-row"><span>Pass Width:</span><span class="metric-val" id="valDeck">12 inches</span></div>
+            <div class="metric-row"><span>Est. Line Length:</span><span class="metric-val" id="valLength">0 ft</span></div>
+            <div class="metric-row"><span>Estimated Turns:</span><span class="metric-val" id="valTurns">0</span></div>
+            <div class="metric-row"><span>Est. Mow Time:</span><span class="metric-val" id="valTime">0 mins</span></div>
+        </div>
+
+        <div class="btn-group">
+            <button id="clearBtn" class="action-btn">Reset</button>
+            <button id="startBtn" class="action-btn" disabled>Simulate Path</button>
+        </div>
+    </div>
+
+    <div id="workspace">
+        <div class="banner" id="infoBanner">📍 Click 3 or more points on the lawn, then click your first point to close the loop.</div>
+        <div id="canvas-container">
+            <canvas id="lawnCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            points: [],
+            pathLines: [],
+            isClosed: false,
+            isSimulating: false,
+            deckSize: 12,
+            speed: 1.5,
+            robot: { x: 0, y: 0, currentTargetIdx: 0, progress: 0 }
+        };
+
+        const canvas = document.getElementById('lawnCanvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const infoBanner = document.getElementById('infoBanner');
+
+        const resizeCanvas = () => {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            draw();
+        };
+
+        const isPointInPolygon = (pt, poly) => {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                const intersect = ((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        };
+
+        const calculateArea = (poly) => {
+            let area = 0;
+            for (let i = 0; i < poly.length; i++) {
+                const j = (i + 1) % poly.length;
+                area += poly[i].x * poly[j].y - poly[j].x * poly[i].y;
+            }
+            return Math.abs(area / 2);
+        };
+
+        const calculateMowPath = () => {
+            if (state.points.length < 3) return;
+
+            const xs = state.points.map(p => p.x);
+            const ys = state.points.map(p => p.y);
+            const minX = Math.min(...xs), maxX = Math.max(...xs);
+            const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+            const lineSpacing = state.deckSize * 1.2; 
+            state.pathLines = [];
+            let directionRight = true;
+
+            for (let y = minY + (lineSpacing/2); y < maxY; y += lineSpacing) {
+                const rowIntersections = [];
+                
+                for (let x = minX; x <= maxX; x += 4) {
+                    if (isPointInPolygon({ x, y }, state.points)) {
+                        rowIntersections.push({ x, y });
+                    }
+                }
+
+                if (rowIntersections.length > 1) {
+                    const startNode = rowIntersections[0];
+                    const endNode = rowIntersections[rowIntersections.length - 1];
+                    
+                    if (directionRight) {
+                        state.pathLines.push(startNode, endNode);
+                    } else {
+                        state.pathLines.push(endNode, startNode);
+                    }
+                    directionRight = !directionRight;
+                }
+            }
+            updateMetrics();
+        };
+
+        const updateMetrics = () => {
+            const pixelArea = calculateArea(state.points);
+            const sqFt = Math.round(pixelArea * 0.15);
+            const lineLength = Math.round((sqFt / (state.deckSize / 12)) * 1.05);
+            const turns = Math.max(0, Math.round(state.pathLines.length / 2) - 1);
+            const mins = Math.ceil(lineLength / (state.speed * 88) + (turns * 0.05));
+
+            document.getElementById('valArea').innerText = `${sqFt.toLocaleString()} sq ft`;
+            document.getElementById('valLength').innerText = `${lineLength.toLocaleString()} ft`;
+            document.getElementById('valTurns').innerText = turns;
+            document.getElementById('valTime').innerText = `${mins} mins`;
+            startBtn.disabled = state.pathLines.length === 0;
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (state.points.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(state.points[0].x, state.points[0].y);
+                state.points.forEach(p => ctx.lineTo(p.x, p.y));
+                
+                if (state.isClosed) {
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(76, 175, 80, 0.25)';
+                    ctx.fill();
+                }
+                ctx.strokeStyle = varColor('--accent');
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                state.points.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                });
+            }
+
+            if (state.pathLines.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(state.pathLines[0].x, state.pathLines[0].y);
+                for(let i = 1; i < state.pathLines.length; i++) {
+                    ctx.lineTo(state.pathLines[i].x, state.pathLines[i].y);
+                }
+                ctx.strokeStyle = '#FFEB3B';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            if (state.isSimulating && state.pathLines.length > 0) {
+                ctx.beginPath();
+                ctx.arc(state.robot.x, state.robot.y, 8, 0, 2 * Math.PI);
+                ctx.fillStyle = '#00E676';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+            }
+        };
+
+        const varColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+        const animateMower = () => {
+            if (!state.isSimulating) return;
+
+            const currentIdx = state.robot.currentTargetIdx;
+            if (currentIdx >= state.pathLines.length - 1) {
+                toggleSimulation();
+                return;
+            }
+
+            const p1 = state.pathLines[currentIdx];
+            const p2 = state.pathLines[currentIdx + 1];
+
+            state.robot.progress += (state.speed * 0.01); 
+            if (state.robot.progress >= 1) {
+                state.robot.progress = 0;
+                state.robot.currentTargetIdx++;
+            }
+
+            state.robot.x = p1.x + (p2.x - p1.x) * state.robot.progress;
+            state.robot.y = p1.y + (p2.y - p1.y) * state.robot.progress;
+
+            draw();
+            requestAnimationFrame(animateMower);
+        };
+
+        const toggleSimulation = () => {
+            state.isSimulating = !state.isSimulating;
+            if (state.isSimulating) {
+                if (state.robot.currentTargetIdx >= state.pathLines.length - 1) {
+                    state.robot.currentTargetIdx = 0;
+                    state.robot.progress = 0;
+                }
+                startBtn.innerText = "Pause Simulation";
+                startBtn.style.background = "#FF9800";
+                animateMower();
+            } else {
+                startBtn.innerText = "Simulate Path";
+                startBtn.style.background = varColor('--accent');
+            }
+        };
+
+        canvas.addEventListener('click', (e) => {
+            if (state.isClosed) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (state.points.length >= 3) {
+                const distToStart = Math.hypot(x - state.points[0].x, y - state.points[0].y);
+                if (distToStart < 15) {
+                    state.isClosed = true;
+                    infoBanner.innerHTML = "🎉 Boundary locked! Select different mowers to dynamically change calculations.";
+                    calculateMowPath();
+                    draw();
+                    return;
+                }
+            }
+
+            state.points.push({ x, y });
+            if(state.points.length >= 3) {
+                infoBanner.innerHTML = "👉 Click near your first point to **close the loop** and render the path lines.";
+            }
+            draw();
+        });
+
+        document.querySelectorAll('.mower-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.mower-btn').forEach(b => b.classList.remove('active'));
+                const target = e.currentTarget;
+                target.classList.add('active');
+                
+                state.deckSize = parseFloat(target.dataset.deck);
+                state.speed = parseFloat(target.dataset.speed);
+                document.getElementById('valDeck').innerText = `${state.deckSize} inches`;
+
+                if (state.isClosed) {
+                    calculateMowPath();
+                    draw();
+                }
+            });
+        });
+
+        startBtn.addEventListener('click', toggleSimulation);
+        
+        clearBtn.addEventListener('click', () => {
+            state.points = [];
+            state.pathLines = [];
+            state.isClosed = false;
+            state.isSimulating = false;
+            state.robot.currentTargetIdx = 0;
+            state.robot.progress = 0;
+            
+            infoBanner.innerHTML = "📍 Click 3 or more points on the lawn, then click your start point to complete the loop.";
+            startBtn.innerText = "Simulate Path";
+            startBtn.style.background = varColor('--accent');
+            startBtn.disabled = true;
+            
+            document.getElementById('valArea').innerText = "0 sq ft";
+            document.getElementById('valLength').innerText = "0 ft";
+            document.getElementById('valTurns').innerText = "0";
+            document.getElementById('valTime').innerText = "0 mins";
+            
+            draw();
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        window.onload = resizeCanvas;
+    </script>
+</body>
+</html>
